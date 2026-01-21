@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-crud-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: node-crud
+  template:
+    metadata:
+      labels:
+        app: node-crud
+    spec:
+      containers:
+      - name: app
+        image: awoke/node-crud-app:__TAG__
+        ports:
+        - containerPort: 3000
