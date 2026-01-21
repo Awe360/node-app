@@ -1,37 +1,55 @@
 pipeline {
     agent any
+
+    environment {
+        DOCKER_IMAGE    = 'awoke/node-crud-app' 
+        DOCKER_TAG      = "${BUILD_NUMBER}"
+        REGISTRY_URL    = 'https://index.docker.io/v1/'
+    }
+
     stages {
-        stage('Build') {
+        stage('Checkout') {
             steps {
-                echo 'npm install'
+                checkout scm
             }
         }
-        stage('Test') {
+
+        stage('Docker Login') {
             steps {
-                echo 'Run tests here (add npm test if you have tests)'
+                withCredentials([usernamePassword(
+                    credentialsId: 'docker-hub-credentials',
+                    usernameVariable: 'DOCKERHUB_USER',
+                    passwordVariable: 'DOCKERHUB_PASS'
+                )]) {
+                    bat 'echo %DOCKERHUB_USER% | docker login %REGISTRY_URL% -u %DOCKERHUB_USER% --password-stdin'
+                }
             }
         }
+
         stage('Build Docker Image') {
             steps {
-                script {
-                    dockerImage = docker.build("awoke/node-crud-app:${env.BUILD_ID}")
-                }
+                bat "docker build -t %DOCKER_IMAGE%:%DOCKER_TAG% ."
+                bat "docker tag %DOCKER_IMAGE%:%DOCKER_TAG% %DOCKER_IMAGE%:latest"
             }
         }
-        stage('Push to Docker Hub') {
+
+        stage('Push Docker Image') {
             steps {
-                script {
-                    docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-credentials') {
-                        dockerImage.push()
-                        dockerImage.push('latest')
-                    }
-                }
+                bat "docker push %DOCKER_IMAGE%:%DOCKER_TAG%"
+                bat "docker push %DOCKER_IMAGE%:latest"
             }
         }
-        stage('Deploy to Kubernetes') {
-            steps {
-                sh 'kubectl apply -f k8s/deployment.yaml' 
-            }
+    }
+
+    post {
+        always {
+            bat 'docker logout %REGISTRY_URL% || exit 0'
+        }
+        success {
+            echo "Image successfully pushed: ${DOCKER_IMAGE}:${DOCKER_TAG} and :latest"
+        }
+        failure {
+            echo "Pipeline failed - check console for details"
         }
     }
 }
