@@ -15,17 +15,17 @@ pipeline {
         }
 
         stage('Docker Login') {
-            steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'docker-hub-credentials',
-                    usernameVariable: 'DOCKERHUB_USER',
-                    passwordVariable: 'DOCKERHUB_PASS'
-                )]) {
-                    bat 'echo %DOCKERHUB_USER% | docker login %REGISTRY_URL% -u %DOCKERHUB_USER% --password-stdin'
-                }
-            }
+    steps {
+        withCredentials([usernamePassword(
+            credentialsId: 'docker-hub-credentials',
+            usernameVariable: 'DOCKERHUB_USER',
+            passwordVariable: 'DOCKERHUB_PASS'
+        )]) {
+            bat 'echo Logging in to Docker Hub'
+            bat 'echo %DOCKERHUB_PASS% | docker login %REGISTRY_URL% -u %DOCKERHUB_USER% --password-stdin'
         }
-
+    }
+}
         stage('Build Docker Image') {
             steps {
                 bat "docker build -t %DOCKER_IMAGE%:%DOCKER_TAG% ."
